@@ -1,6 +1,7 @@
 
 #include <emscripten.h>
 #include <opus.h>
+#include <opus_custom.h>
 #include <iostream>
 #include <vector>
 
@@ -77,7 +78,8 @@ class Decoder{
     Decoder(int _channels, long int _samplerate): dec(NULL), samplerate(_samplerate), channels(_channels)
     {
       int err;
-      dec = opus_decoder_create(samplerate, channels, &err);
+      auto OpusMode = opus_custom_mode_create ( samplerate, 128, &err );
+      dec = opus_custom_decoder_create(OpusMode, channels, &err);
 
       if(dec == NULL)
         std::cerr << "[libopusjs] error while creating opus decoder (errcode " << err << ")" << std::endl;
@@ -102,7 +104,7 @@ class Decoder{
         std::string &packet = packets[0];
 
         if(packet.size() > 0)
-          ret_size = opus_decode(dec, (const unsigned char*)packet.c_str(), packet.size(), buffer, buffer_size/channels, 0);
+          ret_size = opus_custom_decode(dec, (const unsigned char*)packet.c_str(), packet.size(), buffer, buffer_size/channels);
 
         if(ret_size > 0){
           *out = std::vector<int16_t>(buffer, buffer+ret_size*channels);
@@ -119,13 +121,13 @@ class Decoder{
     ~Decoder()
     {
       if(dec)
-        opus_decoder_destroy(dec);
+        opus_custom_decoder_destroy(dec);
     }
 
   private:
     long int samplerate;
     int channels;
-    OpusDecoder *dec;
+    OpusCustomDecoder *dec;
     std::vector<std::string> packets;
 };
 
